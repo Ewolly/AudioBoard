@@ -59,6 +59,8 @@ void setup() {
 }
 
 void loop() {
+  sineTest(126, 1000);
+  delay(1000);
   // put your main code here, to run repeatedly:
 }
 
@@ -145,4 +147,39 @@ void reset(){
   setVolume(40,40);
 }
 
+void sineTest(uint8_t n, uint16_t ms){
+  reset();
+
+  uint16_t mode = sciRead(VS1053_REG_MODE);
+  mode |= 0x0020;
+  sciWrite(VS1053_REG_MODE, mode);
+
+  SPI.beginTransaction(VS1053_DATA_SPI_SETTING);
+  digitalWrite(DS, LOW);
+  spiWrite(0x53);
+  spiWrite(0xEF);
+  spiWrite(0x6E);
+  spiWrite(n);
+  spiWrite(0x00);
+  spiWrite(0x00);
+  spiWrite(0x00);
+  spiWrite(0x00);
+  digitalWrite(DS, HIGH);
+  SPI.endTransaction();
+
+  delay(ms);
+
+  SPI.beginTransaction(VS1053_DATA_SPI_SETTING);
+  digitalWrite(DS,LOW);
+  spiWrite(0x45);
+  spiWrite(0x78);
+  spiWrite(0x69);
+  spiWrite(0x74);
+  spiWrite(0x00);
+  spiWrite(0x00);
+  spiWrite(0x00);
+  spiWrite(0x00);
+  digitalWrite(DS,HIGH);
+  SPI.endTransaction();
+}
 

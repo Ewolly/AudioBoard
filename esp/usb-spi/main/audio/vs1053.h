@@ -4,10 +4,10 @@
 
 #include "driver/spi_master.h"
 
-#define VS1053_1_RESET 1
-#define VS1053_1_DREQ 33
-#define VS1053_2_RESET 4
-#define VS1053_2_DREQ 15
+#define VS1053_1_RESET 22
+#define VS1053_1_DREQ 32
+#define VS1053_2_RESET 21
+#define VS1053_2_DREQ 35
 
 #define VS1053_SCI_READ 0x03
 #define VS1053_SCI_WRITE 0x02
@@ -41,8 +41,9 @@ typedef struct {
 
 /* helper functions */
 audio_spi_t audio_spi_init();
-void sci_write(spi_device_handle_t spi, uint8_t addr, uint16_t data);
-uint16_t sci_read(spi_device_handle_t spi, uint8_t addr);
-void audio_soft_reset(spi_device_handle_t spi);
+void sci_write(audio_bus_t spi, uint8_t addr, uint16_t data);
+uint16_t sci_read(audio_bus_t spi, uint8_t addr);
+void sdi_write(audio_bus_t spi, uint16_t num_bytes, uint8_t *data);
+void audio_soft_reset(audio_bus_t spi);
 void audio_reset(audio_bus_t spi);
 #endif /* _VS1053_H_ */

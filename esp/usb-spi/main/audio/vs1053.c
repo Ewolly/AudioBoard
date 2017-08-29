@@ -161,3 +161,17 @@ void audio_reset(audio_bus_t spi_bus)
     sci_write(spi_bus, VS1053_REG_VOLUME, 0x4040);
 }
 
+inline bool audio_ready_for_data(audio_bus_t spi)
+{
+    return gpio_get_level(spi.dreq);
+}
+
+bool audio_prepare_ogg(audio_bus_t spi)
+{
+    sci_write(VS1053_REG_CLOCKF, 0xC000);
+    while(!audio_ready_for_data(spi));
+    sci_write(spi, VS1053_REG_BASS, 0);
+    audio_soft_reset(spi);
+    while(!audio_ready_for_data(spi));
+    sci_write(VS1053_SCI_AIADDR, 0)    
+}

@@ -11,6 +11,9 @@
 
 #include "audio/vs1053.h"
 
+extern const uint8_t xfiles_ogg_start[] = asm("_binary_xfiles_ogg_start");
+extern const uint8_t xfiles_ogg_end[] = asm("_binary_xfiles_ogg_end");
+
 static const char* TAG = "AUDIO";
 
 void sine_test(audio_bus_t spi, uint8_t n, uint16_t ms)
@@ -29,6 +32,26 @@ void sine_test(audio_bus_t spi, uint8_t n, uint16_t ms)
     sdi_write(spi, sizeof(sine_stop_data), sine_stop_data);    
 }
 
+void xfiles_theme(audio_bus_t spi)
+{
+    uint8_t *audio_buf = xfiles_ogg_start;
+    uint8_t audio_diff = 255;
+    bool playing = true;
+
+    audio_start_playback(spi.spi1);
+
+    while (playing) {
+        while (!audio_ready_for_data(spi.spi1));
+        if ((xfiles_ogg_end - audio_buf) < 256) {
+            audio_diff = xfiles_ogg_end - audio_buf;
+            playing = false;
+        }
+
+        sdi_write(spi, audio_diff, audio_buf);
+        audio_buf += audio_diff;
+    }
+}
+
 void app_main()
 {
     audio_spi_t spi = audio_spi_init();
@@ -40,7 +63,6 @@ void app_main()
     ESP_LOGI(TAG, "VOLUME: 0x%04x", sci_read(spi.spi1, VS1053_REG_VOLUME));
 
     for (;;) {
-        sine_test(spi.spi1, 126, 1000);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        xfiles_theme(spi);
     }
 }

@@ -192,7 +192,7 @@ bool audio_prepare_ogg(audio_bus_t spi)
 
 uint16_t audio_recorded_words_waiting(audio_bus_t spi)
 {
-    return sci_read(spi, VS1053_REG_HDATA1)
+    return sci_read(spi, VS1053_REG_HDAT1);
 }
 
 uint16_t audio_recorded_read_word(audio_bus_t spi)

@@ -52,9 +52,9 @@ void xfiles_theme(audio_bus_t spi)
     }
 }
 
-void record_mic(audio_bus_t spi){
-    uint16_t *audio_storage;
-}
+//void record_mic(audio_bus_t spi){
+//    uint16_t *audio_storage;
+//}
 
 void app_main()
 {

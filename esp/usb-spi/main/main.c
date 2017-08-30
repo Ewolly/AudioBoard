@@ -60,11 +60,15 @@ void app_main()
 {
     audio_spi_t spi = audio_spi_init();
     audio_reset(spi.spi1);
-    // audio_reset(spi.spi2);
+    audio_reset(spi.spi2);
     ESP_LOGI(TAG, "MODE: 0x%04x", sci_read(spi.spi1, VS1053_REG_MODE));
     ESP_LOGI(TAG, "STATUS: 0x%04x", sci_read(spi.spi1, VS1053_REG_STATUS));
     ESP_LOGI(TAG, "CLOCK: 0x%04x", sci_read(spi.spi1, VS1053_REG_CLOCKF));
     ESP_LOGI(TAG, "VOLUME: 0x%04x", sci_read(spi.spi1, VS1053_REG_VOLUME));
+    ESP_LOGI(TAG, "MODE: 0x%04x", sci_read(spi.spi2, VS1053_REG_MODE));
+    ESP_LOGI(TAG, "STATUS: 0x%04x", sci_read(spi.spi2, VS1053_REG_STATUS));
+    ESP_LOGI(TAG, "CLOCK: 0x%04x", sci_read(spi.spi2, VS1053_REG_CLOCKF));
+    ESP_LOGI(TAG, "VOLUME: 0x%04x", sci_read(spi.spi2, VS1053_REG_VOLUME));
 
     for (;;) {
         xfiles_theme(spi.spi1);

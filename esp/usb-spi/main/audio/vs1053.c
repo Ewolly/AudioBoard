@@ -72,25 +72,25 @@ audio_spi_t audio_spi_init()
         &audio_piss.spi1.data);
     ESP_ERROR_CHECK(ret);
 
-    // ret = spi_bus_add_device(HSPI_HOST, &spi2_control_cfg, 
-    //     &audio_piss.spi2.control);
-    // ESP_ERROR_CHECK(ret);
-    // ret = spi_bus_add_device(HSPI_HOST, &spi2_data_cfg, 
-    //     &audio_piss.spi2.data);
-    // ESP_ERROR_CHECK(ret);
+    ret = spi_bus_add_device(HSPI_HOST, &spi2_control_cfg, 
+        &audio_piss.spi2.control);
+    ESP_ERROR_CHECK(ret);
+    ret = spi_bus_add_device(HSPI_HOST, &spi2_data_cfg, 
+        &audio_piss.spi2.data);
+    ESP_ERROR_CHECK(ret);
 
     audio_piss.spi1.reset = VS1053_1_RESET;
     audio_piss.spi1.dreq = VS1053_1_DREQ;
-    // audio_piss.spi2.reset = VS1053_2_RESET;
-    // audio_piss.spi2.dreq = VS1053_2_DREQ;
+    audio_piss.spi2.reset = VS1053_2_RESET;
+    audio_piss.spi2.dreq = VS1053_2_DREQ;
 
     gpio_set_direction(audio_piss.spi1.reset, GPIO_MODE_DEF_OUTPUT);
     gpio_set_level(audio_piss.spi1.reset, 0);
     gpio_set_direction(audio_piss.spi1.dreq, GPIO_MODE_DEF_INPUT);
 
-    // gpio_set_direction(audio_piss.spi2.reset, GPIO_MODE_DEF_OUTPUT);
-    // gpio_set_level(audio_piss.spi2.reset, 0);
-    // gpio_set_direction(audio_piss.spi2.dreq, GPIO_MODE_DEF_INPUT);
+    gpio_set_direction(audio_piss.spi2.reset, GPIO_MODE_DEF_OUTPUT);
+    gpio_set_level(audio_piss.spi2.reset, 0);
+    gpio_set_direction(audio_piss.spi2.dreq, GPIO_MODE_DEF_INPUT);
 
     return audio_piss;
 }
@@ -169,7 +169,7 @@ inline bool audio_ready_for_data(audio_bus_t spi)
     return gpio_get_level(spi.dreq);
 }
 
-uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, uint8_t *data)
+uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, const uint8_t *data)
 {
     uint16_t i = 0;
     uint16_t offsets[] = {0x8000UL, 0x0, 0x4000UL};
@@ -189,13 +189,14 @@ uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, uint8_t *data)
         len = data[i++];
         len <<= 8;
         len |= data[i++] & ~1;
+        addr = data[i++];
         addr <<= 8;
         addr |= data[i++];
 
         if (type == 3)
             return addr;
 
-        sci_write(spi, VS1053_REGWRAMADDR, addr + offset[type]);
+        sci_write(spi, VS1053_REG_WRAMADDR, addr + offsets[type]);
         do {
             info = data[i++];
             info <<= 8;

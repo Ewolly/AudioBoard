@@ -68,6 +68,11 @@ uint16_t sci_read(audio_bus_t spi, uint8_t addr);
 void sdi_write(audio_bus_t spi, uint16_t num_bytes, uint8_t *data);
 void audio_soft_reset(audio_bus_t spi);
 void audio_reset(audio_bus_t spi);
-void audio_start_playback(audio_bus_t spi);
 bool audio_ready_for_data(audio_bus_t spi);
+bool audio_prepare_ogg(audio_bus_t spi);
+uint16_t audio_recorded_words_waiting(audio_bus_t spi);
+uint16_t audio_recorded_read_word(audio_bus_t spi);
+void audio_stop_record(audio_bus_t spi);
+void audio_start_record(audio_bus_t spi, bool mic);
+void audio_start_playback(audio_bus_t spi);
 #endif /* _VS1053_H_ */

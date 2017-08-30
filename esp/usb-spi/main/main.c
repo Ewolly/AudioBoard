@@ -52,6 +52,11 @@ void xfiles_theme(audio_bus_t spi)
     }
 }
 
+void record_mic(audio_bus_t spi){
+    //uint8_t *audio_storage;
+
+}
+
 void app_main()
 {
     audio_spi_t spi = audio_spi_init();

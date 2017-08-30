@@ -8,6 +8,9 @@
 
 static const char* TAG = "VS1053";
 
+extern const uint8_t v441q05_img_start[] asm("_binary_v441q05_img_start");
+extern const uint8_t v441q05_img_end[]   asm("_binary_v441q05_img_end");
+
 audio_spi_t audio_spi_init()
 {
     esp_err_t ret;
@@ -166,15 +169,63 @@ inline bool audio_ready_for_data(audio_bus_t spi)
     return gpio_get_level(spi.dreq);
 }
 
-// bool audio_prepare_ogg(audio_bus_t spi)
-// {
-//     sci_write(VS1053_REG_CLOCKF, 0xC000);
-//     while(!audio_ready_for_data(spi));
-//     sci_write(spi, VS1053_REG_BASS, 0);
-//     audio_soft_reset(spi);
-//     while(!audio_ready_for_data(spi));
-//     sci_write(VS1053_SCI_AIADDR, 0)    
-// }
+bool audio_prepare_ogg(audio_bus_t spi)
+{
+    sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
+    while(!audio_ready_for_data(spi));
+    sci_write(spi, VS1053_REG_BASS, 0);
+    audio_soft_reset(spi);
+    while(!audio_ready_for_data(spi));
+    sci_write(spi, VS1053_SCI_AIADDR, 0);
+    // not sure if need to add interuppt stuff?
+    //sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
+    //sci_write(spi, VS1053_REG_WRAM, 0x02);
+    if (v441q05_img_start == 0xFFFF) 
+    {
+        return false;
+    }    
+    if (v441q05_img_start != 0x34){
+        return false;
+    }
+    return true;
+}
+
+uint16_t audio_recorded_words_waiting(audio_bus_t spi)
+{
+    return sci_read(spi, VS1053_REG_HDATA1)
+}
+
+uint16_t audio_recorded_read_word(audio_bus_t spi)
+{
+  return sci_read(spi, VS1053_REG_HDAT0);
+}
+
+
+void audio_stop_record(audio_bus_t spi)
+{
+    sci_write(spi, VS1053_SCI_AICTRL3, 1);
+}
+
+void audio_start_record(audio_bus_t spi, bool mic)
+{
+    if (mic){
+        sci_write(spi, VS1053_REG_MODE, VS1053_MODE_SM_ADPCM | VS1053_MODE_SM_SDINEW);
+    }
+    else{
+        sci_write(spi, VS1053_REG_MODE, VS1053_MODE_SM_LINE1 | VS1053_MODE_SM_ADPCM | VS1053_MODE_SM_SDINEW);
+    }
+    sci_write(spi, VS1053_SCI_AICTRL0, 1024);
+    /* Rec level: 1024 = 1. If 0, use AGC */
+    sci_write(spi, VS1053_SCI_AICTRL1, 1024);
+    /* Maximum AGC level: 1024 = 1. Only used if SCI_AICTRL1 is set to 0. */
+    sci_write(spi, VS1053_SCI_AICTRL2, 0);
+    /* Miscellaneous bits that also must be set before recording. */
+    sci_write(spi, VS1053_SCI_AICTRL3, 0);
+
+    sci_write(spi, VS1053_SCI_AIADDR, 0x34);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    while (!audio_ready_for_data(spi));
+}
 
 void audio_start_playback(audio_bus_t spi)
 {

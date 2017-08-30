@@ -169,6 +169,68 @@ inline bool audio_ready_for_data(audio_bus_t spi)
     return gpio_get_level(spi.dreq);
 }
 
+uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, uint8_t *data)
+{
+    uint16_t i = 0;
+    uint16_t offsets[] = {0x8000UL, 0x0, 0x4000UL};
+    uint16_t type, addr, len, info;
+
+    if (data[0] != 'P' 
+        || data[1] != '&'
+        || data[2] != 'H')
+        return 0xFFFF;
+    i = 3;
+
+    while (i < num_bytes) {
+        type = data[i++];
+        if (type >= 4)
+            return 0xFFFF;
+        
+        len = data[i++];
+        len <<= 8;
+        len |= data[i++] & ~1;
+        addr <<= 8;
+        addr |= data[i++];
+
+        if (type == 3)
+            return addr;
+
+        sci_write(spi, VS1053_REGWRAMADDR, addr + offset[type]);
+        do {
+            info = data[i++];
+            info <<= 8;
+            info |= data[i++];
+            sci_write(spi, VS1053_REG_WRAM, info);
+        } while (len -= 2);
+    }
+    return 0xFFFF;
+}
+
+// void audio_apply_patch(audio_bus_t spi, const uint16_t *patch, uint16_t patchsize)
+// {
+//     uint16_t i = 0;
+//     uint16_t addr, n, val;
+
+//     while (i < patchsize) {
+
+//         addr = patch[i++];
+//         n = patch[i++];
+
+//         if (n & 0x8000U) {
+//             n &= 0x7FFF;
+//             val = patch[i++];
+//             while (n--)
+//                 sci_write(spi, addr, val);
+//         } else {
+//             while (n--) {
+//                 val = patch[i++];
+//                 sci_write(spi, addr,val);
+//             }
+//         }
+//     }
+// }
+
+
 bool audio_prepare_ogg(audio_bus_t spi)
 {
     sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
@@ -180,13 +242,13 @@ bool audio_prepare_ogg(audio_bus_t spi)
     // not sure if need to add interuppt stuff?
     //sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
     //sci_write(spi, VS1053_REG_WRAM, 0x02);
-    if (v441q05_img_start == 0xFFFF) 
-    {
+    int patch_start_addr = audio_load_plugin(spi, 
+        v441q05_img_end - v441q05_img_start, v441q05_img_start);
+    
+    if (patch_start_addr == 0xFFFF)
         return false;
-    }    
-    if (v441q05_img_start != 0x34){
+    if (patch_start_addr != 0x34)
         return false;
-    }
     return true;
 }
 

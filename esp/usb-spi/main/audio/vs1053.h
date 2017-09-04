@@ -61,6 +61,13 @@ typedef struct {
 	audio_bus_t spi2;
 } audio_spi_t;
 
+typedef struct {
+	uint32_t write;
+	uint32_t read;
+	uint32_t capacity;
+	uint8_t *ring_buffer;
+} rb_t;
+
 /* helper functions */
 audio_spi_t audio_spi_init();
 void sci_write(audio_bus_t spi, uint8_t addr, uint16_t data);
@@ -75,4 +82,14 @@ uint16_t audio_recorded_read_word(audio_bus_t spi);
 void audio_stop_record(audio_bus_t spi);
 void audio_start_record(audio_bus_t spi, bool mic);
 void audio_start_playback(audio_bus_t spi);
+
+rb_t rb_init(uint32_t capacity);
+uint8_t rb_mask(rb_t *rb, uint8_t val);
+void rb_push(rb_t *rb, uint8_t push);
+uint8_t rb_shift(rb_t *rb);
+bool rb_empty(rb_t *rb);
+bool rb_full(rb_t *rb);
+uint32_t rb_size(rb_t *rb);
+void rb_free(rb_t *rb);
+
 #endif /* _VS1053_H_ */

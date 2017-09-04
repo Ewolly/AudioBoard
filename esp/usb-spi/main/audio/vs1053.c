@@ -298,3 +298,54 @@ void audio_start_playback(audio_bus_t spi)
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
 }
+
+rb_t rb_init(uint32_t capacity)
+{
+    rb_t rb;
+
+    rb.write = 0;
+    rb.read = 0;
+    rb.capacity = capacity;
+    rb.ring_buffer = (uint8_t) malloc(capacity);
+
+    return rb;
+}
+
+void rb_free(rb_t *rb)
+{
+    free(rb->ring_buffer);
+    rb->capacity = 0;
+    rb->ring_buffer = NULL;
+}
+
+uint8_t rb_mask(rb_t *rb, uint8_t val)
+{
+    return val & (rb->capacity - 1);
+}
+
+void rb_push(rb_t *rb, uint8_t push)
+{
+    assert(!rb_full(rb));
+    rb->ring_buffer[mask(rb, rb->write++)] = push;    
+}
+
+uint8_t rb_shift(rb_t *rb)
+{
+    assert(!rb_empty(rb));
+    return rb->ring_buffer[mask(rb, rb->read++)];
+}
+
+inline bool rb_empty(rb_t *rb)
+{
+    return rb->read == rb->write;
+}
+
+inline bool rb_full(rb_t *rb)
+{
+    return rb_size(rb) == rb->capacity;
+}
+
+inline uint32_t rb_size(rb_t *rb)
+{
+    return rb->write - rb->read;
+}

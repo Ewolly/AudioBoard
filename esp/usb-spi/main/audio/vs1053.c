@@ -8,9 +8,6 @@
 
 static const char* TAG = "VS1053";
 
-extern const uint8_t v441q05_img_start[] asm("_binary_v441q05_img_start");
-extern const uint8_t v441q05_img_end[]   asm("_binary_v441q05_img_end");
-
 audio_spi_t audio_spi_init()
 {
     esp_err_t ret;
@@ -120,7 +117,7 @@ void sdi_write(audio_bus_t spi, uint16_t num_bytes, uint8_t *data)
     memset(&t, 0, sizeof(t));
     t.length = 8*num_bytes;
     t.tx_buffer = data;
-
+    
     ret = spi_device_transmit(spi.data, &t);
     ESP_ERROR_CHECK(ret);
 }
@@ -235,10 +232,14 @@ uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, const uint8_t *d
 bool audio_prepare_ogg(audio_bus_t spi)
 {
     sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
-    while(!audio_ready_for_data(spi));
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    // while(!audio_ready_for_data(spi));
+    ESP_LOGI(TAG, "got here");
     sci_write(spi, VS1053_REG_BASS, 0);
     audio_soft_reset(spi);
-    while(!audio_ready_for_data(spi));
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    // while(!audio_ready_for_data(spi));
+
     sci_write(spi, VS1053_SCI_AIADDR, 0);
     // not sure if need to add interuppt stuff?
     //sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
@@ -287,7 +288,7 @@ void audio_start_record(audio_bus_t spi, bool mic)
 
     sci_write(spi, VS1053_SCI_AIADDR, 0x34);
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    while (!audio_ready_for_data(spi));
+    // while (!audio_ready_for_data(spi));
 }
 
 void audio_start_playback(audio_bus_t spi)
@@ -326,13 +327,13 @@ uint8_t rb_mask(rb_t *rb, uint8_t val)
 void rb_push(rb_t *rb, uint8_t push)
 {
     assert(!rb_full(rb));
-    rb->ring_buffer[mask(rb, rb->write++)] = push;    
+    rb->ring_buffer[rb_mask(rb, rb->write++)] = push;    
 }
 
 uint8_t rb_shift(rb_t *rb)
 {
     assert(!rb_empty(rb));
-    return rb->ring_buffer[mask(rb, rb->read++)];
+    return rb->ring_buffer[rb_mask(rb, rb->read++)];
 }
 
 inline bool rb_empty(rb_t *rb)

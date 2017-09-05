@@ -52,9 +52,37 @@ void xfiles_theme(audio_bus_t spi)
     }
 }
 
-//void record_mic(audio_bus_t spi){
-//    uint16_t *audio_storage;
-//}
+void audio_record(audio_bus_t speaker, audio_bus_t mic)
+{
+    uint8_t audio_data[32] = {0};
+    uint16_t word, words_waiting;
+
+    audio_start_playback(speaker);
+    ESP_LOGI(TAG, "audio started playback");
+    
+    if (!audio_prepare_ogg(mic))
+        ESP_LOGE(TAG, "error loading ogg plugin");
+    ESP_LOGI(TAG, "ogg prepared");
+    audio_start_record(mic, false);
+    ESP_LOGI(TAG, "audio started recording");
+    
+    while(1) {
+        words_waiting = audio_recorded_words_waiting(mic);
+        while (words_waiting > 16) {
+            for (int x = 0; x < 16; x++) {
+                word = audio_recorded_read_word(mic);
+                audio_data[x*2] = word >> 8;
+                audio_data[x*2 + 1] = word;
+            }
+            
+            ESP_LOGI(TAG, "sending");
+            while (!audio_ready_for_data(speaker));
+            sdi_write(speaker, words_waiting > 32 ? 32 : words_waiting, audio_data);
+            ESP_LOGI(TAG, "words waiting: %d", words_waiting);
+            words_waiting -= words_waiting > 16 ? 16 : words_waiting;
+        }
+    }
+}
 
 void app_main()
 {
@@ -71,7 +99,8 @@ void app_main()
     ESP_LOGI(TAG, "VOLUME: 0x%04x", sci_read(spi.spi2, VS1053_REG_VOLUME));
 
     for (;;) {
-        xfiles_theme(spi.spi1);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        audio_record(spi.spi1, spi.spi2);
+        //xfiles_theme(spi.spi1);
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }

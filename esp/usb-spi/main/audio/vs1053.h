@@ -49,6 +49,9 @@
 #define VS1053_SCI_AICTRL2 0x0E
 #define VS1053_SCI_AICTRL3 0x0F
 
+extern const uint8_t v441q05_img_start[] asm("_binary_v44k1q05_img_start");
+extern const uint8_t v441q05_img_end[]   asm("_binary_v44k1q05_img_end");
+
 typedef struct {
 	spi_device_handle_t control;
 	spi_device_handle_t data;

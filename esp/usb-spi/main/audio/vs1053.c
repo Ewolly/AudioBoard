@@ -242,8 +242,8 @@ bool audio_prepare_ogg(audio_bus_t spi)
 
     sci_write(spi, VS1053_SCI_AIADDR, 0);
     // not sure if need to add interuppt stuff?
-    //sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
-    //sci_write(spi, VS1053_REG_WRAM, 0x02);
+    sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
+    sci_write(spi, VS1053_REG_WRAM, 0x02);
     int patch_start_addr = audio_load_plugin(spi, 
         v441q05_img_end - v441q05_img_start, v441q05_img_start);
     
@@ -280,9 +280,9 @@ void audio_start_record(audio_bus_t spi, bool mic)
     }
     sci_write(spi, VS1053_SCI_AICTRL0, 1024);
     /* Rec level: 1024 = 1. If 0, use AGC */
-    sci_write(spi, VS1053_SCI_AICTRL1, 1024);
+    sci_write(spi, VS1053_SCI_AICTRL1, 0);
     /* Maximum AGC level: 1024 = 1. Only used if SCI_AICTRL1 is set to 0. */
-    sci_write(spi, VS1053_SCI_AICTRL2, 0);
+    sci_write(spi, VS1053_SCI_AICTRL2, 4096);
     /* Miscellaneous bits that also must be set before recording. */
     sci_write(spi, VS1053_SCI_AICTRL3, 0);
 

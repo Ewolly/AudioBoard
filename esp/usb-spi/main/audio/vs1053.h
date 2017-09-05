@@ -7,7 +7,7 @@
 #define VS1053_1_RESET 22
 #define VS1053_1_DREQ 32
 #define VS1053_2_RESET 21
-#define VS1053_2_DREQ 35
+#define VS1053_2_DREQ 33
 
 #define VS1053_SCI_READ 0x03
 #define VS1053_SCI_WRITE 0x02

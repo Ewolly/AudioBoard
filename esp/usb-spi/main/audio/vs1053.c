@@ -233,12 +233,12 @@ bool audio_prepare_ogg(audio_bus_t spi)
 {
     sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
     vTaskDelay(5 / portTICK_PERIOD_MS);
-    // while(!audio_ready_for_data(spi));
+    while(!audio_ready_for_data(spi));
     ESP_LOGI(TAG, "got here");
     sci_write(spi, VS1053_REG_BASS, 0);
     audio_soft_reset(spi);
     vTaskDelay(5 / portTICK_PERIOD_MS);
-    // while(!audio_ready_for_data(spi));
+    while(!audio_ready_for_data(spi));
 
     sci_write(spi, VS1053_SCI_AIADDR, 0);
     // not sure if need to add interuppt stuff?
@@ -288,7 +288,7 @@ void audio_start_record(audio_bus_t spi, bool mic)
 
     sci_write(spi, VS1053_SCI_AIADDR, 0x34);
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    // while (!audio_ready_for_data(spi));
+    while (!audio_ready_for_data(spi));
 }
 
 void audio_start_playback(audio_bus_t spi)

@@ -264,6 +264,16 @@ uint16_t audio_recorded_read_word(audio_bus_t spi)
   return sci_read(spi, VS1053_REG_HDAT0);
 }
 
+uint32_t audio_get_recording_time(audio_bus_t spi)
+{
+    uint32_t time1, time2;
+    
+    sci_write(spi, VS1053_REG_WRAMADDR, 0x8);
+    time1 = sci_read(spi, VS1053_REG_WRAM);
+    time2 = sci_read(spi, VS1053_REG_WRAM);
+
+    return (time2 << 16) | time1;
+}
 
 void audio_stop_record(audio_bus_t spi)
 {
@@ -280,9 +290,9 @@ void audio_start_record(audio_bus_t spi, bool mic)
     }
     sci_write(spi, VS1053_SCI_AICTRL0, 1024);
     /* Rec level: 1024 = 1. If 0, use AGC */
-    sci_write(spi, VS1053_SCI_AICTRL1, 0);
+    sci_write(spi, VS1053_SCI_AICTRL1, 1024);
     /* Maximum AGC level: 1024 = 1. Only used if SCI_AICTRL1 is set to 0. */
-    sci_write(spi, VS1053_SCI_AICTRL2, 4096);
+    sci_write(spi, VS1053_SCI_AICTRL2, 0);
     /* Miscellaneous bits that also must be set before recording. */
     sci_write(spi, VS1053_SCI_AICTRL3, 0);
 

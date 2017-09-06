@@ -85,6 +85,7 @@ uint16_t audio_recorded_read_word(audio_bus_t spi);
 void audio_stop_record(audio_bus_t spi);
 void audio_start_record(audio_bus_t spi, bool mic);
 void audio_start_playback(audio_bus_t spi);
+uint32_t audio_get_recording_time(audio_bus_t spi);
 
 rb_t rb_init(uint32_t capacity);
 uint8_t rb_mask(rb_t *rb, uint8_t val);

@@ -73,7 +73,7 @@ void audio_record(audio_bus_t speaker, audio_bus_t mic)
                 audio_data[x*2] = word >> 8;
                 audio_data[x*2 + 1] = word & 0xFF;
             }
-            while(!audio_ready_for_data(speaker));
+            //while(!audio_ready_for_data(speaker));
             sdi_write(speaker, 32, audio_data);
         }
     }

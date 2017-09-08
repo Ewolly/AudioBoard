@@ -309,6 +309,7 @@ void audio_start_playback(audio_bus_t spi)
     sci_write(spi, VS1053_REG_WRAM, 0);
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
+    while (!audio_ready_for_data());
 }
 
 rb_t rb_init(uint32_t capacity)

@@ -76,7 +76,7 @@ void audio_record(audio_bus_t speaker, audio_bus_t mic)
         words_waiting = audio_recorded_words_waiting(mic);
         //ESP_LOGI(TAG, "time running: %d seconds", audio_get_recording_time(mic));
         while (words_waiting > 256) {
-            for (int x = 0; x < 4; x++) {
+            for (int x = 0; x < 16; x++) {
                 word = audio_recorded_read_word(mic);
                 audio_data[x*2] = word >> 8;
                 audio_data[x*2 + 1] = word;
@@ -116,7 +116,8 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
     while (wordswaiting > 256) {
         for (int x = 0; x < 512/128; x++){
             for (uint16_t addr = 0; addr < 128; addr+=2){
-
+                audio_data[addr] = word >> 8;
+                audio_data[addr + 1] = word;
             }
         }
     }

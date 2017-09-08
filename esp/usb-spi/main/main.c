@@ -55,55 +55,27 @@ void xfiles_theme(audio_bus_t spi)
 void audio_record(audio_bus_t speaker, audio_bus_t mic)
 {
     uint8_t audio_data[32] = {0};
-    uint16_t count = 0;
-    bool finished_recording = false;
-    bool finished_encoding = false;
     uint16_t word, words_waiting;
 
     audio_start_playback(speaker);
-    ESP_LOGI(TAG, "audio started playback");
     
     if (!audio_prepare_ogg(mic))
         ESP_LOGE(TAG, "error loading ogg plugin");
-    ESP_LOGI(TAG, "ogg prepared");
+
     audio_start_record(mic, false);
     ESP_LOGI(TAG, "audio started recording");
     
-    while (!finished_encoding) {
-        if (finished_recording && (sci_read(mic, VS1053_SCI_AICTRL3) & 0x0001))
-            finished_encoding = true;
-
+    while (1) {
         words_waiting = audio_recorded_words_waiting(mic);
-        //ESP_LOGI(TAG, "time running: %d seconds", audio_get_recording_time(mic));
-        while (words_waiting > 256) {
+        while (words_waiting >= 16) {
             for (int x = 0; x < 16; x++) {
                 word = audio_recorded_read_word(mic);
                 audio_data[x*2] = word >> 8;
-                audio_data[x*2 + 1] = word;
-                //printf("%c%c", word >> 8, word & 0x00FF);            
-                count++;
-                if (!finished_recording && count >= 10000){
-                    sci_write(mic, VS1053_SCI_AICTRL3, sci_read(mic, VS1053_SCI_AICTRL3) | 0x0001);
-                    finished_recording = true;
-                }
+                audio_data[x*2 + 1] = word & 0xFF;
             }
-            
-            while (!audio_ready_for_data(speaker));
-            sdi_write(speaker, words_waiting > 32 ? 32 : words_waiting*2, audio_data);
-            // ESP_LOGI(TAG, "words waiting: %d", words_waiting);
-            words_waiting -= words_waiting > 256 ? 256 : words_waiting;
+            sdi_write(speaker, 32, audio_data);
         }
     }
-
-    sci_read(mic, VS1053_SCI_AICTRL3);
-    if (sci_read(mic, VS1053_SCI_AICTRL3) & 0x0004) {
-        ESP_LOGI(TAG, "bit was set");
-        audio_soft_reset(mic);
-    }
-    else{
-        audio_soft_reset(mic);
-    }
-
 }
 
 void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
@@ -116,8 +88,8 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
     while (wordswaiting > 256) {
         for (int x = 0; x < 512/128; x++){
             for (uint16_t addr = 0; addr < 128; addr+=2){
-                audio_data[addr] = word >> 8;
-                audio_data[addr + 1] = word;
+                //audio_data[addr] = word >> 8;
+                //audio_data[addr + 1] = word;
             }
         }
     }

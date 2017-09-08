@@ -94,14 +94,15 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
     // sci_write(speaker, VS1053_REG_MODE, sci_read(speaker, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
 
     // initial feed buffer
-    while (rb_size(rb) < 32768) {
+    while (rb_size(&audio_rb) < 32768) {
         words_waiting = audio_recorded_words_waiting(mic);
-        while (words_waiting >= 256) {
+        if (words_waiting > 256) {
             //pretty sure this will need fixing
-            for (int x = 0; x < 256; x++) {
+            for (int x = 0; x < words_waiting; x++) {
                 word = audio_recorded_read_word(mic);
-                rb.push(audio_rb, word >> 8);
-                rb.push(audio_rb, word  & 0xFF);
+                
+                rb_push(&audio_rb, word >> 8);
+                rb_push(&audio_rb, word  & 0xFF);
             }
         }
     }
@@ -124,7 +125,8 @@ void app_main()
     ESP_LOGI(TAG, "VOLUME: 0x%04x", sci_read(spi.spi2, VS1053_REG_VOLUME));
 
     for (;;) {
-        audio_record(spi.spi1, spi.spi2);
+        hunter_audio_record(spi.spi1, spi.spi2);
+        //audio_record(spi.spi1, spi.spi2);
         //xfiles_theme(spi.spi1);
         // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

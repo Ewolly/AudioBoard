@@ -234,7 +234,7 @@ bool audio_prepare_ogg(audio_bus_t spi)
     sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
     vTaskDelay(5 / portTICK_PERIOD_MS);
     while(!audio_ready_for_data(spi));
-    ESP_LOGI(TAG, "got here");
+
     sci_write(spi, VS1053_REG_BASS, 0);
     audio_soft_reset(spi);
     vTaskDelay(5 / portTICK_PERIOD_MS);
@@ -319,7 +319,7 @@ rb_t rb_init(uint32_t capacity)
     rb.write = 0;
     rb.read = 0;
     rb.capacity = capacity;
-    rb.ring_buffer = (uint8_t) malloc(capacity);
+    rb.ring_buffer = (uint8_t *) malloc(capacity);
 
     return rb;
 }

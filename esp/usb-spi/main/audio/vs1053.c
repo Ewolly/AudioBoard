@@ -303,6 +303,7 @@ void audio_start_record(audio_bus_t spi, bool mic)
 
 void audio_start_playback(audio_bus_t spi)
 {
+    //here
     sci_write(spi, VS1053_REG_MODE, VS1053_MODE_SM_LINE1 | VS1053_MODE_SM_SDINEW);
     sci_write(spi, VS1053_REG_WRAMADDR, 0x1e29);
     sci_write(spi, VS1053_REG_WRAM, 0);

@@ -81,19 +81,32 @@ void audio_record(audio_bus_t speaker, audio_bus_t mic)
 
 void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
 {
-    uint16_t written = 0;
-    uint8_t audio_data[32] = {0};
+    rb_t audio_rb = rb_init(65536);
+    uint16_t word, words_waiting;
 
-    uint16_t wordswaiting = audio_recorded_words_waiting(mic);
 
-    while (wordswaiting > 256) {
-        for (int x = 0; x < 512/128; x++){
-            for (uint16_t addr = 0; addr < 128; addr+=2){
-                //audio_data[addr] = word >> 8;
-                //audio_data[addr + 1] = word;
+    if (!audio_prepare_ogg(mic))
+        ESP_LOGE(TAG, "error loading ogg plugin");
+
+    audio_start_record(mic, false);
+    ESP_LOGI(TAG, "audio started recording");
+
+    // sci_write(speaker, VS1053_REG_MODE, sci_read(speaker, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
+
+    // initial feed buffer
+    while (rb_size(rb) < 32768) {
+        words_waiting = audio_recorded_words_waiting(mic);
+        while (words_waiting >= 256) {
+            //pretty sure this will need fixing
+            for (int x = 0; x < 256; x++) {
+                word = audio_recorded_read_word(mic);
+                rb.push(audio_rb, word >> 8);
+                rb.push(audio_rb, word  & 0xFF);
             }
         }
     }
+    ESP_LOGI(TAG, "half-done");
+
 }
 
 void app_main()

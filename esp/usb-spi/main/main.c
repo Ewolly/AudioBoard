@@ -82,8 +82,10 @@ void audio_record(audio_bus_t speaker, audio_bus_t mic)
 void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
 {
     rb_t audio_rb = rb_init(65536);
+    uint8_t little_piss[32] = {0};
     uint16_t word, words_waiting;
-
+    uint8_t shift_amount = 0;
+    bool playing = true;
 
     if (!audio_prepare_ogg(mic))
         ESP_LOGE(TAG, "error loading ogg plugin");
@@ -108,6 +110,25 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
     }
     ESP_LOGI(TAG, "half-done");
 
+
+    while (rb_size(&audio_rb) > 0) {
+        // while (!audio_ready_for_data(spi));
+        
+        if (rb_size(&audio_rb) >= 32)
+            shift_amount = 32;
+        else
+            shift_amount = rb_size(&audio_rb);
+
+        // shift_amount = rb_size(&audio_rb) >= 32 ? 32 : rb_size(&audio_rb);
+        for (uint8_t i = 0; i < shift_amount; ++i) {
+            little_piss[i] = rb_shift(&audio_rb);
+        }
+ 
+        sdi_write(speaker, shift_amount, little_piss);
+    }
+    ESP_LOGI(TAG, "full-done");
+
+    rb_free(&audio_rb);
 }
 
 void app_main()

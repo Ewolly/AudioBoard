@@ -96,7 +96,7 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
     // sci_write(speaker, VS1053_REG_MODE, sci_read(speaker, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
 
     // initial feed buffer
-    while (rb_size(&audio_rb) < 32768) {
+    while (rb_size(&audio_rb) < 8192) {
         words_waiting = audio_recorded_words_waiting(mic);
         if (words_waiting > 256) {
             //pretty sure this will need fixing
@@ -112,7 +112,6 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
 
 
     while (rb_size(&audio_rb) > 0) {
-        // while (!audio_ready_for_data(spi));
         
         if (rb_size(&audio_rb) >= 32)
             shift_amount = 32;
@@ -122,8 +121,10 @@ void hunter_audio_record(audio_bus_t speaker, audio_bus_t mic)
         // shift_amount = rb_size(&audio_rb) >= 32 ? 32 : rb_size(&audio_rb);
         for (uint8_t i = 0; i < shift_amount; ++i) {
             little_piss[i] = rb_shift(&audio_rb);
+            printf("%c", little_piss[i]);
         }
  
+        while (!audio_ready_for_data(speaker));
         sdi_write(speaker, shift_amount, little_piss);
     }
     ESP_LOGI(TAG, "full-done");

@@ -52,6 +52,9 @@
 extern const uint8_t v441q05_img_start[] asm("_binary_v44k1q05_img_start");
 extern const uint8_t v441q05_img_end[]   asm("_binary_v44k1q05_img_end");
 
+extern const uint8_t vs1053b_patches_plg_start[] asm("_binary_vs1053b_patches_plg_start");
+extern const uint8_t vs1053b_patches_plg_end[] asm("_binary_vs1053b_patches_plg_end");
+
 typedef struct {
 	spi_device_handle_t control;
 	spi_device_handle_t data;
@@ -79,7 +82,8 @@ void sdi_write(audio_bus_t spi, uint16_t num_bytes, uint8_t *data);
 void audio_soft_reset(audio_bus_t spi);
 void audio_reset(audio_bus_t spi);
 bool audio_ready_for_data(audio_bus_t spi);
-bool audio_prepare_ogg(audio_bus_t spi);
+bool audio_prepare_record_ogg(audio_bus_t spi);
+bool audio_prepare_playback_ogg(audio_bus_t spi);
 uint16_t audio_recorded_words_waiting(audio_bus_t spi);
 uint16_t audio_recorded_read_word(audio_bus_t spi);
 void audio_stop_record(audio_bus_t spi);
@@ -88,7 +92,7 @@ void audio_start_playback(audio_bus_t spi);
 uint32_t audio_get_recording_time(audio_bus_t spi);
 
 rb_t rb_init(uint32_t capacity);
-uint8_t rb_mask(rb_t *rb, uint8_t val);
+uint32_t rb_mask(rb_t *rb, uint32_t val);
 void rb_push(rb_t *rb, uint8_t push);
 uint8_t rb_shift(rb_t *rb);
 bool rb_empty(rb_t *rb);

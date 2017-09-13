@@ -229,7 +229,7 @@ uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, const uint8_t *d
 // }
 
 
-bool audio_prepare_ogg(audio_bus_t spi)
+bool audio_prepare_record_ogg(audio_bus_t spi)
 {
     sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
     vTaskDelay(5 / portTICK_PERIOD_MS);
@@ -247,6 +247,31 @@ bool audio_prepare_ogg(audio_bus_t spi)
     int patch_start_addr = audio_load_plugin(spi, 
         v441q05_img_end - v441q05_img_start, v441q05_img_start);
     
+    if (patch_start_addr == 0xFFFF)
+        return false;
+    if (patch_start_addr != 0x34)
+        return false;
+    return true;
+}
+
+bool audio_prepare_playback_ogg(audio_bus_t spi)
+{
+    sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    while(!audio_ready_for_data(spi));
+
+    sci_write(spi, VS1053_REG_BASS, 0);
+    audio_soft_reset(spi);
+    vTaskDelay(5 / portTICK_PERIOD_MS);
+    while(!audio_ready_for_data(spi));
+
+    sci_write(spi, VS1053_SCI_AIADDR, 0);
+    // not sure if need to add interuppt stuff?
+    sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
+    sci_write(spi, VS1053_REG_WRAM, 0x02);
+    int patch_start_addr = audio_load_plugin(spi, 
+        vs1053b_patches_plg_end - vs1053b_patches_plg_start, vs1053b_patches_plg_start);
+    ESP_LOGI(TAG, "%2x", patch_start_addr)
     if (patch_start_addr == 0xFFFF)
         return false;
     if (patch_start_addr != 0x34)
@@ -319,7 +344,8 @@ rb_t rb_init(uint32_t capacity)
     rb.write = 0;
     rb.read = 0;
     rb.capacity = capacity;
-    rb.ring_buffer = (uint8_t *) malloc(capacity);
+    rb.ring_buffer = (uint8_t *) malloc(sizeof(uint8_t) * capacity);
+    assert(rb.ring_buffer != NULL);
 
     return rb;
 }
@@ -331,7 +357,7 @@ void rb_free(rb_t *rb)
     rb->ring_buffer = NULL;
 }
 
-uint8_t rb_mask(rb_t *rb, uint8_t val)
+uint32_t rb_mask(rb_t *rb, uint32_t val)
 {
     return val & (rb->capacity - 1);
 }
@@ -345,6 +371,7 @@ void rb_push(rb_t *rb, uint8_t push)
 uint8_t rb_shift(rb_t *rb)
 {
     assert(!rb_empty(rb));
+    // ESP_LOGI(TAG, "%d (%d)", rb->read, rb_mask(rb, rb->read));
     return rb->ring_buffer[rb_mask(rb, rb->read++)];
 }
 

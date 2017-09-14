@@ -142,7 +142,7 @@ uint16_t sci_read(audio_bus_t spi, uint8_t addr)
     return (rx_buf[2] << 8) | rx_buf[3];
 }
 
-uint32_t sci_read_32(audio_bus_t spi, uint8_T ADDR)
+uint32_t sci_read_32(audio_bus_t spi, uint8_t addr)
 {
     uint16_t msbv1, lsb, msbv2;
     

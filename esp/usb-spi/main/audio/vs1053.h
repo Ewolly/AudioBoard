@@ -75,6 +75,7 @@ typedef struct {
 audio_spi_t audio_spi_init();
 void sci_write(audio_bus_t spi, uint8_t addr, uint16_t data);
 uint16_t sci_read(audio_bus_t spi, uint8_t addr);
+uint32_t sci_read_32(audio_bus_t spi, uint8_t addr);
 void sdi_write(audio_bus_t spi, uint16_t num_bytes, uint8_t *data);
 void audio_soft_reset(audio_bus_t spi);
 void audio_reset(audio_bus_t spi);

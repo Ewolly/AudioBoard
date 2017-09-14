@@ -97,6 +97,7 @@ void audio_playback(void *pvParameters)
     ESP_LOGI(TAG, "starting playback");
 
     audio_start_playback(spi.spi1);
+    
     sci_write(spi.spi1, VS1053_REG_MODE, sci_read(spi.spi1, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
     
     ESP_LOGI(TAG, "bitrate: %d kbit/s", sci_read(spi.spi1, VS1053_REG_HDAT0)*8);

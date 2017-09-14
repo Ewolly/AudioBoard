@@ -142,7 +142,7 @@ uint16_t sci_read(audio_bus_t spi, uint8_t addr)
     return (rx_buf[2] << 8) | rx_buf[3];
 }
 
-uint32_t sci_read_32(audio_bus_t spi, uint8_t addr)
+uint32_t sci_read_32(audio_bus_t spi, uint16_t addr)
 {
     uint16_t msbv1, lsb, msbv2;
     
@@ -219,10 +219,10 @@ uint16_t audio_load_plugin(audio_bus_t spi, uint16_t num_bytes, const uint8_t *d
     return 0xFFFF;
 }
 
-void audio_load_plg(audio_bus_t spi, uint16_t num_bytes,  const uint16_t *patch) {
-  int i = 0;
+void audio_load_plg(audio_bus_t spi, uint32_t num_bytes,  const uint16_t *patch) {
+  uint32_t i = 0;
 
-  while (i<num_bytes) {
+  while (i < num_bytes) {
     uint16_t addr, n, val;
     addr = patch[i++];
     n = patch[i++];
@@ -293,7 +293,6 @@ bool audio_prepare_record_ogg(audio_bus_t spi)
 
 void audio_prepare_playback_ogg(audio_bus_t spi)
 {
-
     const uint16_t vs1053b_decoding_patch[] = { /* Compressed plugin */
         0x0007,0x0001, /*copy 1*/
         0x8050,
@@ -724,21 +723,7 @@ void audio_prepare_playback_ogg(audio_bus_t spi)
         0x0300,
     };
 
-    sci_write(spi, VS1053_REG_CLOCKF, 0xC000);
-    vTaskDelay(5 / portTICK_PERIOD_MS);
-    while(!audio_ready_for_data(spi));
-
-    sci_write(spi, VS1053_REG_BASS, 0);
-    audio_soft_reset(spi);
-    vTaskDelay(5 / portTICK_PERIOD_MS);
-    while(!audio_ready_for_data(spi));
-
-    sci_write(spi, VS1053_SCI_AIADDR, 0);
-    // not sure if need to add interuppt stuff?
-    sci_write(spi, VS1053_REG_WRAMADDR, VS1053_INT_ENABLE);
-    sci_write(spi, VS1053_REG_WRAM, 0x02);
     audio_load_plg(spi, sizeof(vs1053b_decoding_patch) / sizeof(vs1053b_decoding_patch[0]), vs1053b_decoding_patch);
-    ESP_LOGI(TAG, "%d", sizeof(vs1053b_decoding_patch) / sizeof(vs1053b_decoding_patch[0]))
 }
 
 uint16_t audio_recorded_words_waiting(audio_bus_t spi)
@@ -788,15 +773,26 @@ void audio_start_record(audio_bus_t spi, bool mic)
     while (!audio_ready_for_data(spi));
 }
 
+void audio_adjust_rate(audio_bus_t spi, int32_t rate){
+    sci_write(spi, VS1053_REG_WRAMADDR, 0x1e07);
+    sci_write(spi, VS1053_REG_WRAM, rate);
+    sci_write(spi, VS1053_REG_WRAM, rate >> 16);
+
+    sci_write(spi, VS1053_REG_WRAMADDR, 0x5b1c);
+    sci_write(spi, VS1053_REG_WRAM, 0);
+
+    sci_write(spi, VS1053_REG_AUDATA, sci_read(spi, VS1053_REG_AUDATA));
+}
+
 void audio_start_playback(audio_bus_t spi)
 {
-    //here
     sci_write(spi, VS1053_REG_MODE, VS1053_MODE_SM_LINE1 | VS1053_MODE_SM_SDINEW);
     sci_write(spi, VS1053_REG_WRAMADDR, 0x1e29);
     sci_write(spi, VS1053_REG_WRAM, 0);
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
     while (!audio_ready_for_data(spi));
+    // audio_adjust_rate(spi, -2088);
 }
 
 rb_t rb_init(uint32_t capacity)
@@ -806,7 +802,7 @@ rb_t rb_init(uint32_t capacity)
     rb.write = 0;
     rb.read = 0;
     rb.capacity = capacity;
-    rb.ring_buffer = (uint8_t *) malloc(sizeof(uint8_t) * capacity);
+    rb.ring_buffer = (audio_packet_t *) malloc(sizeof(audio_packet_t) * capacity);
     assert(rb.ring_buffer != NULL);
 
     return rb;
@@ -824,13 +820,14 @@ uint32_t rb_mask(rb_t *rb, uint32_t val)
     return val & (rb->capacity - 1);
 }
 
-void rb_push(rb_t *rb, uint8_t push)
+void rb_push(rb_t *rb, audio_packet_t *packet)
 {
     assert(!rb_full(rb));
-    rb->ring_buffer[rb_mask(rb, rb->write++)] = push;    
+    memcpy(rb->ring_buffer[rb_mask(rb, rb->write++)].data, packet->data, sizeof(packet));
+    rb->ring_buffer[rb_mask(rb, rb->write++)].count = packet->count;
 }
 
-uint8_t rb_shift(rb_t *rb)
+audio_packet_t rb_shift(rb_t *rb)
 {
     assert(!rb_empty(rb));
     // ESP_LOGI(TAG, "%d (%d)", rb->read, rb_mask(rb, rb->read));

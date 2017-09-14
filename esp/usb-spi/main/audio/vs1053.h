@@ -65,17 +65,22 @@ typedef struct {
 } audio_spi_t;
 
 typedef struct {
+	uint32_t count;
+	uint8_t data[32];
+} audio_packet_t;
+
+typedef struct {
 	uint32_t write;
 	uint32_t read;
 	uint32_t capacity;
-	uint8_t *ring_buffer;
+	audio_packet_t *ring_buffer;
 } rb_t;
 
 /* helper functions */
 audio_spi_t audio_spi_init();
 void sci_write(audio_bus_t spi, uint8_t addr, uint16_t data);
 uint16_t sci_read(audio_bus_t spi, uint8_t addr);
-uint32_t sci_read_32(audio_bus_t spi, uint8_t addr);
+uint32_t sci_read_32(audio_bus_t spi, uint16_t addr);
 void sdi_write(audio_bus_t spi, uint16_t num_bytes, uint8_t *data);
 void audio_soft_reset(audio_bus_t spi);
 void audio_reset(audio_bus_t spi);
@@ -91,13 +96,11 @@ uint32_t audio_get_recording_time(audio_bus_t spi);
 
 rb_t rb_init(uint32_t capacity);
 uint32_t rb_mask(rb_t *rb, uint32_t val);
-void rb_push(rb_t *rb, uint8_t push);
-uint8_t rb_shift(rb_t *rb);
+void rb_push(rb_t *rb, audio_packet_t *packet);
+audio_packet_t rb_shift(rb_t *rb);
 bool rb_empty(rb_t *rb);
 bool rb_full(rb_t *rb);
 uint32_t rb_size(rb_t *rb);
 void rb_free(rb_t *rb);
-
-
 
 #endif /* _VS1053_H_ */

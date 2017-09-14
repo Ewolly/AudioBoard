@@ -84,43 +84,32 @@ rb_t audio_rb;
 
 void audio_playback(void *pvParameters)
 {
-    uint32_t audio_size;
-    uint8_t little_piss[32];
+    audio_packet_t packet = {};    
+    uint32_t audio_size, sample_count;
     double delay;
     uint16_t i, count;
     
-    audio_prepare_playback_ogg(spi.spi1);
-        //ESP_LOGE(TAG, "error loading ogg plugin");
+    // audio_prepare_playback_ogg(spi.spi1);
 
     // wait for buffer to fill up
-    while (rb_size(&audio_rb) < (32768 + 16384));
+    while (rb_size(&audio_rb) < 512);
     ESP_LOGI(TAG, "starting playback");
 
     audio_start_playback(spi.spi1);
     
-    sci_write(spi.spi1, VS1053_REG_MODE, sci_read(spi.spi1, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
+    //sci_write(spi.spi1, VS1053_REG_MODE, sci_read(spi.spi1, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
     
-    ESP_LOGI(TAG, "bitrate: %d kbit/s", sci_read(spi.spi1, VS1053_REG_HDAT0)*8);
-    delay = 32000.0f/sci_read(spi.spi1, VS1053_REG_HDAT0);
-    count = 0;
-    delay = 8.0f;
     while (1) {
         audio_size = rb_size(&audio_rb);
 
-        if (audio_size < 32)
-            continue;
-
-        count++;
-        for (i = 0; i < 32; ++i)
-            little_piss[i] = rb_shift(&audio_rb);
-        sdi_write(spi.spi1, 32, little_piss);
-        
-        while (!audio_ready_for_data(spi.spi1));
-        //ESP_LOGI(TAG, "HDAT0: %d", sci_read(spi.spi1, VS1053_REG_HDAT0));
-        //delay = (32.0f * 8.0f)/sci_read(spi.spi1, VS1053_REG_HDAT0);
-        sci_write(spi.spi1, VS1053_REG_WRAMADDR, 0x1e05);
-        delay = 32000.0f / sci_read(spi.spi1, VS1053_REG_WRAM);
-        vTaskDelay(delay / portTICK_PERIOD_MS);
+        if (audio_size > 0) {
+            packet = rb_shift(&audio_rb);
+            // packet.data[31] = '\0';
+            // ESP_LOGI(TAG, "%d: %s", packet.count, packet.data);
+            sdi_write(spi.spi1, 32, packet.data);
+            // sample_count = sci_read_32(spi.spi1, 0x1800);
+            // ESP_LOGI(TAG, "sample count: %d", sample_count);
+        }
     }
 
     rb_free(&audio_rb);
@@ -128,12 +117,15 @@ void audio_playback(void *pvParameters)
 
 void audio_record(void *pvParameters)
 {
+    audio_packet_t *packet, new_packet;
     uint16_t word, words_waiting;
+
+    packet = (audio_packet_t *) malloc(sizeof(packet));
     spi = audio_spi_init();
     audio_reset(spi.spi1);
     audio_reset(spi.spi2);
     
-    audio_rb = rb_init(65536);
+    audio_rb = rb_init(1024);
     xTaskCreate(&audio_playback, "audio_playback", 16384, NULL, 5, NULL);
     
     if (!audio_prepare_record_ogg(spi.spi2))
@@ -145,14 +137,15 @@ void audio_record(void *pvParameters)
     while (!rb_full(&audio_rb))
     {
         words_waiting = audio_recorded_words_waiting(spi.spi2);
-        if (words_waiting > 256) {
-            for (int x = 0; x < words_waiting; x++) {
+        if (words_waiting > 16) {
+            for (int x = 0; x < 16; x += 2) {
                 word = audio_recorded_read_word(spi.spi2);
-                
-                rb_push(&audio_rb, word >> 8);
-                rb_push(&audio_rb, word & 0x00FF);
+                packet->data[x] = word >> 8;
+                packet->data[x+1] = word & 0x00FF;
             }
-        }
+            packet->count = sci_read_32(spi.spi2, 0x1800);
+            rb_push(&audio_rb, packet);
+        }    
     }
     ESP_LOGE(TAG, "buffer full!");
     rb_free(&audio_rb);

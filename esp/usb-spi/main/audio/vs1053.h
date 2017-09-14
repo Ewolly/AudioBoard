@@ -52,9 +52,6 @@
 extern const uint8_t v441q05_img_start[] asm("_binary_v44k1q05_img_start");
 extern const uint8_t v441q05_img_end[]   asm("_binary_v44k1q05_img_end");
 
-extern const uint8_t vs1053b_patches_plg_start[] asm("_binary_vs1053b_patches_plg_start");
-extern const uint8_t vs1053b_patches_plg_end[] asm("_binary_vs1053b_patches_plg_end");
-
 typedef struct {
 	spi_device_handle_t control;
 	spi_device_handle_t data;
@@ -83,7 +80,7 @@ void audio_soft_reset(audio_bus_t spi);
 void audio_reset(audio_bus_t spi);
 bool audio_ready_for_data(audio_bus_t spi);
 bool audio_prepare_record_ogg(audio_bus_t spi);
-bool audio_prepare_playback_ogg(audio_bus_t spi);
+void audio_prepare_playback_ogg(audio_bus_t spi);
 uint16_t audio_recorded_words_waiting(audio_bus_t spi);
 uint16_t audio_recorded_read_word(audio_bus_t spi);
 void audio_stop_record(audio_bus_t spi);
@@ -99,5 +96,7 @@ bool rb_empty(rb_t *rb);
 bool rb_full(rb_t *rb);
 uint32_t rb_size(rb_t *rb);
 void rb_free(rb_t *rb);
+
+
 
 #endif /* _VS1053_H_ */

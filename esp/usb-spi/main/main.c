@@ -85,16 +85,12 @@ rb_t audio_rb;
 void audio_playback(void *pvParameters)
 {
     uint32_t audio_size;
-    uint8_t little_piss[32], big_piss[128];
-    uint16_t i, j, count;
-    uint32_t bitrate, last_buf = 32768;
-    double delay = 8, kp = 0.00005, ki = 0, kd = 0.00003, delay_diff;
-    int16_t error, audio_diff, error_diff, last_error = 0, last_diff = 0;
-    int32_t error_sum = 0;
-    uint32_t tick_count = 0;
-
-    if (!audio_prepare_playback_ogg(spi.spi1))
-        ESP_LOGE(TAG, "error loading ogg plugin");
+    uint8_t little_piss[32];
+    double delay;
+    uint16_t i, count;
+    
+    audio_prepare_playback_ogg(spi.spi1);
+        //ESP_LOGE(TAG, "error loading ogg plugin");
 
     // wait for buffer to fill up
     while (rb_size(&audio_rb) < (32768 + 16384));
@@ -103,20 +99,6 @@ void audio_playback(void *pvParameters)
     audio_start_playback(spi.spi1);
     sci_write(spi.spi1, VS1053_REG_MODE, sci_read(spi.spi1, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
     
-    // while (!audio_ready_for_data(spi.spi1));
-    // for (i = 0; i < 8192; ++i) {
-    //     big_piss[i] = rb_shift(&audio_rb);
-    // }
-    // sdi_write(spi.spi1, 8192, big_piss);
-
-    for (i = 0; i < 128; ++i) {
-        while (!audio_ready_for_data(spi.spi1));
-        for (j = 0; j < 128; ++j)
-            big_piss[j] = rb_shift(&audio_rb);
-
-        sdi_write(spi.spi1, 128, big_piss);
-    }
-
     ESP_LOGI(TAG, "bitrate: %d kbit/s", sci_read(spi.spi1, VS1053_REG_HDAT0)*8);
     delay = 32000.0f/sci_read(spi.spi1, VS1053_REG_HDAT0);
     count = 0;

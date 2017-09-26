@@ -49,8 +49,8 @@
 #define VS1053_SCI_AICTRL2 0x0E
 #define VS1053_SCI_AICTRL3 0x0F
 
-extern const uint8_t v441q05_img_start[] asm("_binary_v44k1q05_img_start");
-extern const uint8_t v441q05_img_end[]   asm("_binary_v44k1q05_img_end");
+extern const uint8_t v441q05_img_start[] asm("_binary_v44k2q05_img_start");
+extern const uint8_t v441q05_img_end[]   asm("_binary_v44k2q05_img_end");
 
 typedef struct {
 	spi_device_handle_t control;
@@ -66,7 +66,8 @@ typedef struct {
 
 typedef struct {
 	uint32_t count;
-	uint8_t data[32];
+	uint16_t packet_size;
+	uint8_t data[512];
 } audio_packet_t;
 
 typedef struct {

@@ -19,96 +19,52 @@ static const char* TAG = "AUDIO";
 audio_spi_t spi;
 rb_t audio_rb;
 
-// void sine_test(audio_bus_t spi, uint8_t n, uint16_t ms)
-// {
-//     audio_reset(spi);
-//     uint16_t mode = sci_read(spi, VS1053_REG_MODE);
-//     mode |= 0x0020;
-//     sci_write(spi, VS1053_REG_MODE, mode);
-    
-//     uint8_t sine_test_data[] = {0x53, 0xEF, 0x6E, n, 0x00, 0x00, 0x00, 0x00};
-//     sdi_write(spi, sizeof(sine_test_data), sine_test_data);
-
-//     vTaskDelay(ms / portTICK_PERIOD_MS);
-
-//     uint8_t sine_stop_data[] = {0x45, 0x78, 0x69, 0x74, 0x00, 0x00, 0x00, 0x00};
-//     sdi_write(spi, sizeof(sine_stop_data), sine_stop_data);    
-// }
-
-// void xfiles_theme(audio_bus_t spi)
-// {
-//     uint8_t *audio_buf = xfiles_ogg_start;
-//     uint8_t audio_diff = 32;
-//     bool playing = true;
-
-//     audio_start_playback(spi);
-
-//     while (playing) {
-//         while (!audio_ready_for_data(spi));
-//         if ((xfiles_ogg_end - audio_buf) < 32) {
-//             audio_diff = xfiles_ogg_end - audio_buf;
-//             playing = false;
-//         }
-
-//         sdi_write(spi, audio_diff, audio_buf);
-//         audio_buf += audio_diff;
-//     }
-// }
-
-// void audio_record(audio_bus_t speaker, audio_bus_t mic)
-// {
-//     uint8_t audio_data[32] = {0};
-//     uint16_t word, words_waiting;
-
-//     audio_start_playback(speaker);
-    
-//     if (!audio_prepare_ogg(mic))
-//         ESP_LOGE(TAG, "error loading ogg plugin");
-
-//     audio_start_record(mic, false);
-//     ESP_LOGI(TAG, "audio started recording");
-    
-//     while (1) {
-//         words_waiting = audio_recorded_words_waiting(mic);
-//         while (words_waiting >= 16) {
-//             for (int x = 0; x < 16; x++) {
-//                 word = audio_recorded_read_word(mic);
-//                 audio_data[x*2] = word >> 8;
-//                 audio_data[x*2 + 1] = word & 0xFF;
-//             }
-//             //while(!audio_ready_for_data(speaker));
-//             sdi_write(speaker, 32, audio_data);
-//         }
-//     }
-// }
-
 void audio_playback(void *pvParameters)
 {
     audio_packet_t packet = {};    
-    uint32_t audio_size, sample_count;
+    uint32_t audio_size, sample_count, last_sample_count = 0;
     double delay;
-    uint16_t i, count;
+    uint16_t i, x, count = 0;
     
-    // audio_prepare_playback_ogg(spi.spi1);
+    audio_prepare_playback_ogg(spi.spi1);
 
     // wait for buffer to fill up
-    while (rb_size(&audio_rb) < 512);
+    while (rb_size(&audio_rb) < 64);
     ESP_LOGI(TAG, "starting playback");
 
     audio_start_playback(spi.spi1);
     
-    //sci_write(spi.spi1, VS1053_REG_MODE, sci_read(spi.spi1, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
+    // sci_write(spi.spi1, VS1053_REG_MODE, sci_read(spi.spi1, VS1053_REG_MODE) | VS1053_MODE_SM_STREAM);
     
     while (1) {
         audio_size = rb_size(&audio_rb);
 
         if (audio_size > 0) {
+            count++;
             packet = rb_shift(&audio_rb);
-            // packet.data[31] = '\0';
-            // ESP_LOGI(TAG, "%d: %s", packet.count, packet.data);
-            sdi_write(spi.spi1, 32, packet.data);
-            // sample_count = sci_read_32(spi.spi1, 0x1800);
-            // ESP_LOGI(TAG, "sample count: %d", sample_count);
+            for (i = 0; i < packet.packet_size; i += 32)
+            {
+                if (packet.packet_size - i < 32)
+                    x = packet.packet_size - i;
+                else
+                    x = 32;
+
+                while (!audio_ready_for_data(spi.spi1));
+                sdi_write(spi.spi1, x, packet.data + i);
+            }
+
+            while (!audio_ready_for_data(spi.spi1));
+            sample_count = sci_read_32(spi.spi1, 0x1800);
+        }
+
+        if (count > 64) {
+            count = 0;
+            
+            ESP_LOGI(TAG, "%d: %u - %u = %u", 
+                audio_size, 
+                packet.count, 
+                sample_count, 
+                packet.count - sample_count);
         }
     }
 
@@ -117,15 +73,15 @@ void audio_playback(void *pvParameters)
 
 void audio_record(void *pvParameters)
 {
-    audio_packet_t *packet, new_packet;
+    audio_packet_t packet = {0};
     uint16_t word, words_waiting;
+    bool offset = false;
 
-    packet = (audio_packet_t *) malloc(sizeof(packet));
     spi = audio_spi_init();
     audio_reset(spi.spi1);
     audio_reset(spi.spi2);
     
-    audio_rb = rb_init(1024);
+    audio_rb = rb_init(128);
     xTaskCreate(&audio_playback, "audio_playback", 16384, NULL, 5, NULL);
     
     if (!audio_prepare_record_ogg(spi.spi2))
@@ -137,15 +93,43 @@ void audio_record(void *pvParameters)
     while (!rb_full(&audio_rb))
     {
         words_waiting = audio_recorded_words_waiting(spi.spi2);
-        if (words_waiting > 16) {
-            for (int x = 0; x < 16; x += 2) {
-                word = audio_recorded_read_word(spi.spi2);
-                packet->data[x] = word >> 8;
-                packet->data[x+1] = word & 0x00FF;
+        while (words_waiting > 256) {
+            if (offset) {
+                packet.data[0] = audio_recorded_read_word(spi.spi2) & 0x00FF;
             }
-            packet->count = sci_read_32(spi.spi2, 0x1800);
-            rb_push(&audio_rb, packet);
-        }    
+            
+            for (int x = 0; x < 255; x++) {
+                word = audio_recorded_read_word(spi.spi2);
+                if (offset) {
+                    packet.data[2*x+1] = word >> 8;
+                    packet.data[2*x+2] = word & 0x00FF;
+                } else {
+                    packet.data[2*x] = word >> 8;
+                    packet.data[2*x+1] = word & 0x00FF;
+                }
+            }
+            sci_read(spi.spi2, VS1053_SCI_AICTRL3);
+            word = sci_read(spi.spi2, VS1053_SCI_AICTRL3);
+            if (word & 0x0002) {
+                if (offset) {
+                    packet.data[511] = word >> 8;
+                    packet.packet_size = 512;
+                }
+                else {
+                    packet.data[510] = word >> 8;
+                    packet.packet_size = 511;
+                }
+                offset = !offset;
+            } else {
+                if (offset)
+                    packet.packet_size = 511;
+                else
+                    packet.packet_size = 510;
+            }
+            packet.count = sci_read_32(spi.spi2, 0x1800);
+            rb_push(&audio_rb, &packet);
+            words_waiting -= 256;
+        }
     }
     ESP_LOGE(TAG, "buffer full!");
     rb_free(&audio_rb);

@@ -25,14 +25,14 @@ audio_spi_t audio_spi_init()
         .clock_speed_hz = 250000,
         .mode = 0,
         .spics_io_num = 5,
-        .queue_size = 4
+        .queue_size = 1
     };
 
     spi_device_interface_config_t spi1_data_cfg = {
         .clock_speed_hz = 8000000,
         .mode = 0,
         .spics_io_num = 25,
-        .queue_size = 4
+        .queue_size = 1
     };
 
     spi_bus_config_t spi2_bus_cfg = {
@@ -44,17 +44,17 @@ audio_spi_t audio_spi_init()
     };
 
     spi_device_interface_config_t spi2_control_cfg = {
-        .clock_speed_hz = 250000,
+        .clock_speed_hz = 2500000,
         .mode = 0,
         .spics_io_num = 15,
-        .queue_size = 4
+        .queue_size = 1
     };
 
     spi_device_interface_config_t spi2_data_cfg = {
         .clock_speed_hz = 8000000,
         .mode = 0,
         .spics_io_num = 26,
-        .queue_size = 4
+        .queue_size = 1
     };
 
     ret = spi_bus_initialize(VSPI_HOST, &spi1_bus_cfg, 1);
@@ -155,6 +155,7 @@ uint32_t sci_read_32(audio_bus_t spi, uint16_t addr)
         msbv1 = msbv2;
     }
     return ((uint32_t)msbv1 << 16) | lsb;
+    // return lsb;
 }
 
 void audio_soft_reset(audio_bus_t spi) 
@@ -173,7 +174,7 @@ void audio_reset(audio_bus_t spi_bus)
     audio_soft_reset(spi_bus);
     vTaskDelay(100 / portTICK_PERIOD_MS);
     sci_write(spi_bus, VS1053_REG_CLOCKF, 0x6000);
-    sci_write(spi_bus, VS1053_REG_VOLUME, 0x4040);
+    sci_write(spi_bus, VS1053_REG_VOLUME, 0x0c0c);
 }
 
 inline bool audio_ready_for_data(audio_bus_t spi)
@@ -722,8 +723,10 @@ void audio_prepare_playback_ogg(audio_bus_t spi)
         0x000a,0x0001, /*copy 1*/
         0x0300,
     };
-
+    audio_reset(spi);
+    
     audio_load_plg(spi, sizeof(vs1053b_decoding_patch) / sizeof(vs1053b_decoding_patch[0]), vs1053b_decoding_patch);
+    while (!audio_ready_for_data(spi));
 }
 
 uint16_t audio_recorded_words_waiting(audio_bus_t spi)
@@ -766,7 +769,7 @@ void audio_start_record(audio_bus_t spi, bool mic)
     /* Maximum AGC level: 1024 = 1. Only used if SCI_AICTRL1 is set to 0. */
     sci_write(spi, VS1053_SCI_AICTRL2, 0);
     /* Miscellaneous bits that also must be set before recording. */
-    sci_write(spi, VS1053_SCI_AICTRL3, 0);
+    sci_write(spi, VS1053_SCI_AICTRL3, 0x10);
 
     sci_write(spi, VS1053_SCI_AIADDR, 0x34);
     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -792,7 +795,7 @@ void audio_start_playback(audio_bus_t spi)
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
     sci_write(spi, VS1053_REG_DECODETIME, 0x00);
     while (!audio_ready_for_data(spi));
-    // audio_adjust_rate(spi, -2088);
+    audio_adjust_rate(spi, -2496);
 }
 
 rb_t rb_init(uint32_t capacity)
@@ -823,7 +826,8 @@ uint32_t rb_mask(rb_t *rb, uint32_t val)
 void rb_push(rb_t *rb, audio_packet_t *packet)
 {
     assert(!rb_full(rb));
-    memcpy(rb->ring_buffer[rb_mask(rb, rb->write++)].data, packet->data, sizeof(packet));
+    memcpy(rb->ring_buffer[rb_mask(rb, rb->write)].data, packet->data, 512);
+    rb->ring_buffer[rb_mask(rb, rb->write)].packet_size = packet->packet_size;
     rb->ring_buffer[rb_mask(rb, rb->write++)].count = packet->count;
 }
 

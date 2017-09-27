@@ -22,7 +22,7 @@ audio_spi_t audio_spi_init()
     };
 
     spi_device_interface_config_t spi1_control_cfg = {
-        .clock_speed_hz = 250000,
+        .clock_speed_hz = 2500000,
         .mode = 0,
         .spics_io_num = 5,
         .queue_size = 1
@@ -44,7 +44,7 @@ audio_spi_t audio_spi_init()
     };
 
     spi_device_interface_config_t spi2_control_cfg = {
-        .clock_speed_hz = 2500000,
+        .clock_speed_hz = 250000,
         .mode = 0,
         .spics_io_num = 15,
         .queue_size = 1
@@ -63,23 +63,23 @@ audio_spi_t audio_spi_init()
     ESP_ERROR_CHECK(ret);
 
     ret = spi_bus_add_device(VSPI_HOST, &spi1_control_cfg, 
-        &audio_piss.spi1.control);
-    ESP_ERROR_CHECK(ret);
-    ret = spi_bus_add_device(VSPI_HOST, &spi1_data_cfg, 
-        &audio_piss.spi1.data);
-    ESP_ERROR_CHECK(ret);
-
-    ret = spi_bus_add_device(HSPI_HOST, &spi2_control_cfg, 
         &audio_piss.spi2.control);
     ESP_ERROR_CHECK(ret);
-    ret = spi_bus_add_device(HSPI_HOST, &spi2_data_cfg, 
+    ret = spi_bus_add_device(VSPI_HOST, &spi1_data_cfg, 
         &audio_piss.spi2.data);
     ESP_ERROR_CHECK(ret);
 
-    audio_piss.spi1.reset = VS1053_1_RESET;
-    audio_piss.spi1.dreq = VS1053_1_DREQ;
-    audio_piss.spi2.reset = VS1053_2_RESET;
-    audio_piss.spi2.dreq = VS1053_2_DREQ;
+    ret = spi_bus_add_device(HSPI_HOST, &spi2_control_cfg, 
+        &audio_piss.spi1.control);
+    ESP_ERROR_CHECK(ret);
+    ret = spi_bus_add_device(HSPI_HOST, &spi2_data_cfg, 
+        &audio_piss.spi1.data);
+    ESP_ERROR_CHECK(ret);
+
+    audio_piss.spi2.reset = VS1053_1_RESET;
+    audio_piss.spi2.dreq = VS1053_1_DREQ;
+    audio_piss.spi1.reset = VS1053_2_RESET;
+    audio_piss.spi1.dreq = VS1053_2_DREQ;
 
     gpio_set_direction(audio_piss.spi1.reset, GPIO_MODE_DEF_OUTPUT);
     gpio_set_level(audio_piss.spi1.reset, 0);
